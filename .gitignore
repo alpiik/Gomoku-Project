@@ -4,6 +4,8 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+*.user
+.idea/
 
 # Windows thumbnail cache files
 Thumbs.db
