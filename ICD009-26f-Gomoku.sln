@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp", "ConsoleApp\ConsoleApp.csproj", "{86DA52D6-AF66-440F-9CC7-0AD02A55897C}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution-items", "Solution-items", "{7DEF5614-AC9B-4141-A3A8-6C27B783FD27}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "!Solution-items", "!Solution-items", "{2D689990-124E-4BC0-9055-AB42CD882662}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 	EndProjectSection
