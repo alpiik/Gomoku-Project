@@ -1,4 +1,6 @@
 ﻿var running = true;
+
+console.WriteLine("Welcome to Tic-Tac-Toe!");
  
 while (running)
 {
@@ -115,9 +117,10 @@ static bool HasWon(char[,] b, char p)
         if (b[0, i] == p && b[1, i] == p && b[2, i] == p) return true;
     }
  
-    // diagonals
+    // diagonal
     if (b[0, 0] == p && b[1, 1] == p && b[2, 2] == p) return true;
     if (b[0, 2] == p && b[1, 1] == p && b[2, 0] == p) return true;
  
     return false;
 }
+ 
