@@ -17,7 +17,7 @@ dotnet run --project MenuDemo     # A1 menu library demo
 dotnet run --project ConsoleUI    # the game (from A2)
 ```
 
-Run the console apps in a real terminal (or enable *Emulate terminal in output console* in Rider) — the menu clears the screen between redraws.
+Run the console apps in a real terminal (or enable *Emulate terminal in output console* in Rider) — the menu clears the screen between redraws, and the key that stops an AI vs AI game (A5) can only be detected on a real keyboard. With redirected input (Rider's plain output console, piped input) a key press is never seen.
 
 ## Solution structure
 
@@ -184,7 +184,7 @@ The program applies new migrations itself on the next start.
 | --- | --- | --- |
 | Human vs human | Human, Human | `Q` at the move prompt |
 | Human vs AI | one Human, one AI (either side; an AI as X opens the game) | `Q` at your move prompt. The AI answers right after your move |
-| AI vs AI | two AIs | **any key**. There is a half-second pause before every move so the game can be watched |
+| AI vs AI | two AIs | **any key** (in a real terminal, see "Build, run, test"). There is a half-second pause before every move so the game can be watched |
 
 The game is saved after every move in every mode, so a stopped or left game continues with `L) Load a saved game`, and the AI keeps playing. The board header (`X: Random AI   O: Greedy AI`) and the saved games list show who plays.
 
