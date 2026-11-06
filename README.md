@@ -27,8 +27,9 @@ Run the console apps in a real terminal (or enable *Emulate terminal in output c
 | `MenuDemo` | A1 — small console app that demonstrates every menu feature |
 | `GameEngine` | A2 — Gomoku rules, configurations, presets, game state, repository interfaces; no console or file code |
 | `DAL.Json` | A3 — saves configurations and games as JSON files in the user's home folder |
+| `DAL.EF` | A4 — saves the same data in a SQLite database with EF Core; `Migrations/` folder |
 | `ConsoleUI` | the Gomoku console app: board drawing, keyboard input, menus; the composition root (`Program.cs`) |
-| `Tests` | xUnit tests for the menu, the game rules and the JSON storage |
+| `Tests` | xUnit tests for the menu, the game rules and both storages (contract tests) |
 
 ## A1 — Menu system
 
@@ -112,12 +113,66 @@ The last move is shown in brackets, e.g. `[X]`. An illegal move (taken cell, out
 - **Interfaces in the engine.** `IConfigRepository` and `IGameRepository` are in `GameEngine`; `DAL.Json` implements them. `ConfigurationUi`, `GamesUi` and `GameRunner` only see the interfaces. `Program.cs` is the only file that names `ConfigRepositoryJson` / `GameRepositoryJson`.
 - **Same contract for every implementation** (written in the interfaces' XML comments): `List` is sorted (configs alphabetically, games newest first), `Get` throws `KeyNotFoundException` when missing, `Save` inserts or overwrites (never duplicates), `Delete` does nothing when missing.
 - **Keys.** A configuration's key is its name, compared ignoring case. The file name is the name in lower case, so `Small` and `small` are the same file on Windows, macOS and Linux. Only letters, digits, spaces, `-` and `_` are allowed in names (`GameConfiguration.IsValidName`), so every name is a legal file name on every OS and can't point outside the folder. A game's key is its `Guid`.
-- **What a game file stores:** format version, time of save, and the `GameState`: id, name, a copy of the configuration (all extension fields), board, whose turn, move history, creation time. The game status is not stored; it is calculated from the board. A saved game keeps its own copy of the configuration, so editing or deleting a configuration never breaks a saved game.
+- **What a game file stores:** a format version and the `GameState`: id, name, a copy of the configuration (all extension fields), board, whose turn, move history, creation time and time of the last save. The game status is not stored; it is calculated from the board. A saved game keeps its own copy of the configuration, so editing a configuration never breaks a saved game.
 - **Presets** are seeded by `Presets.SeedMissing` at every start: on the first run all four are created, and a preset file removed by hand comes back on the next start. The UI does not allow editing or deleting presets.
-- **One shared `JsonSerializerOptions`** (`JsonDefaults`): indented, enums as text (`"X"`, never numbers), `null` and missing values are errors instead of silent defaults.
+- **One shared `JsonSerializerOptions`** (`GameStateJson.Options` in `GameEngine`, since A4 also used by the database): indented, enums as text (`"X"`, never numbers), `null` and missing values are errors instead of silent defaults.
 - **Safe writing.** Files are written to `*.tmp` and then renamed (`FileHelpers.WriteAtomic`), so a crash never leaves half a file.
 - **Damaged files are reported, not hidden.** A file that can't be read, breaks the rules (`GameState.Validate`, `GameConfiguration.Validate`) or comes from a newer format version throws an exception with the file name. `StorageErrors.Guard` turns those storage errors into a message in the menu instead of crashing the program; other exceptions (real bugs) are not caught.
-- **Format version** (`SaveFormat.Current = 1`). When the file layout changes, the version goes up and the reader learns to upgrade older files.
+- **Format version** (`GameStateJson.CurrentVersion = 1`). When the layout changes, the version goes up and the reader learns to upgrade older text.
+
+## A4 — EF Core database and dependency injection
+
+### Switching the storage
+
+One value in [`ConsoleUI/appsettings.json`](ConsoleUI/appsettings.json):
+
+```json
+{ "Persistence": "Db" }      // or "Json"
+```
+
+An environment variable with the same name overrides it for one run, nothing to edit:
+
+```powershell
+$env:Persistence = "Json"; dotnet run --project ConsoleUI   # PowerShell
+```
+
+```bash
+Persistence=Json dotnet run --project ConsoleUI              # bash
+```
+
+The main menu title shows which storage is used: `Gomoku (saving to database)` or `Gomoku (saving to JSON files)`. The two storages are separate: a game saved in one is not in the other.
+
+### The database
+
+- SQLite file `~/.icd0008/gomoku/gomoku.db` (Windows: `C:\Users\<you>\.icd0008\gomoku\gomoku.db`), built from the user's home folder (`DbPaths`), never a path from one laptop. To look inside: Rider → Database → `+` → Data Source → SQLite → choose the file.
+- `Database.Migrate()` runs at startup: a fresh clone creates the database and its tables by itself, no `dotnet ef` commands needed.
+- Tables, from the one migration `InitialCreate`:
+
+  | Table | Columns |
+  | --- | --- |
+  | `Configurations` | `Id` (key), `Name` (unique, ignores upper/lower case), `BoardWidth`, `BoardHeight`, `WinLength`, `ExactWinLength`, `ProOpening` |
+  | `SavedGames` | `Id` (the engine's `Guid`), `Name`, `SavedAtUtc`, `StateJson`, `ConfigurationId` (foreign key → `Configurations`) |
+
+- **Relationship:** a configuration has many saved games, each saved game belongs to one configuration. Delete behaviour is `Restrict`: the database refuses to delete a configuration that saved games use (`Cascade` would silently delete the games). The configuration screen checks this first and tells the user to delete those games, so both storages behave the same.
+- **`StateJson`** holds the whole game, written by the same code as the JSON files (`GameStateJson`), so a file and a row contain exactly the same text and the game keeps its `Guid` in both. The other columns exist so the saved games list is one small query (with a join for the configuration name) that never reads the JSON.
+
+### Creating a migration (only when the entities change)
+
+```bash
+dotnet tool install --global dotnet-ef --version 10.0.14   # once; same major version as the EF Core packages
+dotnet ef migrations add <WhatChanged> --project DAL.EF --startup-project ConsoleUI --output-dir Migrations
+```
+
+The program applies new migrations itself on the next start.
+
+### Design decisions
+
+- **Same interfaces, same behaviour.** `ConfigRepositoryEf` and `GameRepositoryEf` implement `IConfigRepository` / `IGameRepository` exactly like the JSON versions: same sort order (configurations are sorted in C# with the same comparer, because SQLite's own case-insensitive order puts `_` before letters), same `KeyNotFoundException`, same insert-or-overwrite `Save`, same silent `Delete`.
+- **Contract tests.** `ConfigRepositoryContractTests` and `GameRepositoryContractTests` use `[Theory]` + `[MemberData]`: every test runs once with `"Json"` (a temporary folder) and once with `"Db"` (in-memory SQLite with the real migration applied). Things only one storage has are tested in `JsonStorageTests` and `DbStorageTests`.
+- **Dependency injection** (`Microsoft.Extensions.DependencyInjection`) in `Program.cs`, the only place that names concrete classes. The `switch` on `Persistence` registers either the JSON or the EF repositories; `ConfigurationUi`, `GamesUi` and the move provider get theirs through their constructors. The `DbContext` and EF repositories are *scoped* (never singletons); `ValidateScopes` and `ValidateOnBuild` report a wrong lifetime at startup.
+- **One unit of work per repository method:** one `SaveChanges`, then the change tracker is cleared (`SaveChangesAndForget`), so a refused operation can't stay queued and break the next one. Read-only queries use `AsNoTracking`.
+- **Entities are not domain objects.** `Configuration` and `SavedGame` are table rows with settable properties; the engine's `GameConfiguration` record and `GameState` know nothing about EF. The repositories map between them.
+- **UTC times.** SQLite stores dates as text and forgets they are UTC; a value converter on `SavedAtUtc` puts the `Kind` back, so the list shows the right local time.
 
 ## AI usage log
 
@@ -126,3 +181,4 @@ The last move is shown in brackets, e.g. `[X]`. An illegal move (taken cell, out
 | 2026-11-06 | Claude Code read the course lectures and the teacher's demo, then wrote the A1 menu library, demo app and menu tests step by step with explanations | TODO | TODO |
 | 2026-11-06 | Claude Code wrote the A2 game engine (rules, overline, pro opening), engine tests, the console board, move input and configuration screens | TODO | TODO |
 | 2026-11-06 | Claude Code wrote the A3 JSON storage (`DAL.Json`), the game repository interface, autosave, saved games screens and the storage tests | TODO | TODO |
+| 2026-11-06 | Claude Code wrote the A4 EF Core storage (`DAL.EF`, migration), dependency injection with the `appsettings.json` switch, and turned the storage tests into contract tests for both storages | TODO | TODO |
