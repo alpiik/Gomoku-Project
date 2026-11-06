@@ -5,7 +5,17 @@ namespace ConsoleUI;
 /// <summary>A human at the keyboard. Reads "row,col" with 1-based numbers, as they are shown on the board.</summary>
 public class ConsoleMoveProvider : IMoveProvider
 {
-    public Move? GetMove(GameState state)
+    /// <summary>
+    /// Console.ReadLine can't be cancelled, so the move is read right here and handed back as a finished task.
+    /// The game loop therefore never watches for the stop key during a human's turn; the human leaves with Q.
+    /// </summary>
+    public Task<Move?> GetMoveAsync(GameState state, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(ReadMove(state));
+    }
+
+    private static Move? ReadMove(GameState state)
     {
         while (true)
         {

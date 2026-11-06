@@ -16,7 +16,9 @@ public static class BoardView
         }
 
         var config = brain.Config;
+        var state = brain.State;
         Console.WriteLine($"Gomoku - {config.Name}: {Describe(config)}");
+        Console.WriteLine($"X: {PlayerName(state.PlayerX)}   O: {PlayerName(state.PlayerO)}");
         Console.WriteLine();
 
         Move? lastMove = brain.State.Moves.Count > 0 ? brain.State.Moves[^1] : null;
@@ -42,7 +44,11 @@ public static class BoardView
 
         if (brain.Status == EGameStatus.InProgress)
         {
-            Console.WriteLine($"Move {brain.State.Moves.Count + 1}. Player {brain.State.NextMoveBy} to move.");
+            // only text changes with the player type; how the move is made is the move provider's business
+            var toMove = state.PlayerOf(state.NextMoveBy);
+            Console.WriteLine(toMove == EPlayerType.Human
+                ? $"Move {state.Moves.Count + 1}. Player {state.NextMoveBy} to move."
+                : $"Move {state.Moves.Count + 1}. Player {state.NextMoveBy} ({PlayerName(toMove)}) to move - press any key to stop.");
         }
 
         if (message != "")
@@ -59,6 +65,14 @@ public static class BoardView
         var proOpening = config.ProOpening ? ", pro opening" : "";
         return $"{config.BoardWidth} columns x {config.BoardHeight} rows, {winRule}{proOpening}";
     }
+
+    public static string PlayerName(EPlayerType type) => type switch
+    {
+        EPlayerType.Human => "Human",
+        EPlayerType.RandomAi => "Random AI",
+        EPlayerType.GreedyAi => "Greedy AI",
+        _ => type.ToString(),
+    };
 
     private static void WriteColumnNumbers(int width)
     {

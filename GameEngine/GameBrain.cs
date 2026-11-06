@@ -141,11 +141,23 @@ public class GameBrain
     public bool CheckWin(int row, int col)
     {
         var player = State.Board[row][col];
-        if (player == EGamePiece.Empty)
-        {
-            return false;
-        }
+        return player != EGamePiece.Empty && FormsWinningLine(row, col, player);
+    }
 
+    /// <summary>
+    /// Would the player to move win by playing the empty cell (row, col)? Answers without placing the piece,
+    /// so an AI can ask it about every legal move and the real board never changes.
+    /// </summary>
+    public bool WouldWin(int row, int col) =>
+        IsInside(row, col)
+        && State.Board[row][col] == EGamePiece.Empty
+        && FormsWinningLine(row, col, State.NextMoveBy);
+
+    public static EGamePiece Opponent(EGamePiece piece) => piece == EGamePiece.X ? EGamePiece.O : EGamePiece.X;
+
+    // a piece of 'player' at (row, col), plus that player's pieces next to it, counted in all four directions
+    private bool FormsWinningLine(int row, int col, EGamePiece player)
+    {
         foreach (var (dRow, dCol) in Directions)
         {
             var length = 1
@@ -159,8 +171,6 @@ public class GameBrain
 
         return false;
     }
-
-    public static EGamePiece Opponent(EGamePiece piece) => piece == EGamePiece.X ? EGamePiece.O : EGamePiece.X;
 
     // the overline rule: exactly N wins (standard) or N or more wins (free-style)
     private bool IsWinningLength(int length) =>

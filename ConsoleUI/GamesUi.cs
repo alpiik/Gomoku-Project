@@ -7,8 +7,13 @@ namespace ConsoleUI;
 /// Screens for starting, continuing, listing and deleting games. Talks only to the interfaces, so it
 /// doesn't know (or care) whether the games are in JSON files or a database.
 /// </summary>
-public class GamesUi(ConfigurationUi configUi, IGameRepository games, IMoveProvider human)
+public class GamesUi(ConfigurationUi configUi, IGameRepository games, MoveProviderFactory players)
 {
+    // AI vs AI moves instantly; this pause makes the game watchable and gives the stop key time to be pressed
+    private static readonly TimeSpan AiVsAiPause = TimeSpan.FromMilliseconds(500);
+
+    private static readonly EPlayerType[] PlayerTypes = Enum.GetValues<EPlayerType>();
+
     public string NewGame()
     {
         var config = configUi.Choose("New game - choose a configuration");
@@ -17,18 +22,24 @@ public class GamesUi(ConfigurationUi configUi, IGameRepository games, IMoveProvi
             return MenuResult.None;
         }
 
+        var playerX = AskPlayerType(EGamePiece.X);
+        var playerO = playerX is null ? null : AskPlayerType(EGamePiece.O);
+        if (playerO is null)
+        {
+            return MenuResult.None;
+        }
+
         var name = AskGameName($"{config.Name} {DateTime.Now:yyyy-MM-dd HH:mm}");
         return name is null
             ? MenuResult.None
-            : GameRunner.Run(GameState.New(config, name), human, human, games);
+            : Play(GameState.New(config, name, playerX!.Value, playerO.Value));
     }
 
+    /// <summary>A loaded game continues with the players it was saved with, AI included.</summary>
     public string Continue()
     {
         var game = Choose("Load a saved game");
-        return game is null
-            ? MenuResult.None
-            : GameRunner.Run(games.Get(game.Id), human, human, games);
+        return game is null ? MenuResult.None : Play(games.Get(game.Id));
     }
 
     public string ListAll()
@@ -78,9 +89,32 @@ public class GamesUi(ConfigurationUi configUi, IGameRepository games, IMoveProvi
         return index is null ? null : saved[index.Value];
     }
 
-    // name, configuration, local time of the last save
+    // the saved player types decide who plays; the game loop itself never looks at them
+    private string Play(GameState state)
+    {
+        var aiVsAi = state.PlayerX != EPlayerType.Human && state.PlayerO != EPlayerType.Human;
+        var run = GameRunner.RunAsync(state, players.Create(state.PlayerX), players.Create(state.PlayerO), games,
+            aiVsAi ? AiVsAiPause : TimeSpan.Zero);
+
+        // the menu library is synchronous, so the game is waited for here. A console app has no
+        // SynchronizationContext, so this blocking wait can't deadlock.
+        return run.GetAwaiter().GetResult();
+    }
+
+    // null = cancelled
+    private static EPlayerType? AskPlayerType(EGamePiece piece)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"Player {piece}:");
+        var index = ConsoleInput.AskChoice(PlayerTypes.Select(BoardView.PlayerName).ToList());
+        return index is null ? null : PlayerTypes[index.Value];
+    }
+
+    // name, configuration, players, local time of the last save
     private static string Line(GameSummary game) =>
-        $"{game.Name,-30} {game.ConfigName,-12} saved {game.SavedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+        $"{game.Name,-30} {game.ConfigName,-12} " +
+        $"{BoardView.PlayerName(game.PlayerX),-9} vs {BoardView.PlayerName(game.PlayerO),-9} " +
+        $"saved {game.SavedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
 
     // null = cancelled (end of input)
     private static string? AskGameName(string defaultName)

@@ -38,7 +38,11 @@ switch (persistence)
             $"appsettings.json: \"Persistence\" must be \"Json\" or \"Db\", not \"{persistence}\".");
 }
 
-services.AddSingleton<IMoveProvider, ConsoleMoveProvider>();
+// one Random for the whole run (Random.Shared is also safe if an AI later thinks on another thread);
+// creating a new Random for every move is what the assignment warns against
+services.AddSingleton(Random.Shared);
+services.AddSingleton<ConsoleMoveProvider>();
+services.AddSingleton<MoveProviderFactory>();
 services.AddScoped<ConfigurationUi>();
 services.AddScoped<GamesUi>();
 
@@ -76,7 +80,7 @@ var savedGamesMenu = new Menu("Gomoku - saved games", EMenuLevel.Second)
 
 var storageName = persistence == "Db" ? "database" : "JSON files";
 var mainMenu = new Menu($"Gomoku (saving to {storageName})", EMenuLevel.Main)
-    .AddItem("N", "New game (human vs human)", Guard(gamesUi.NewGame))
+    .AddItem("N", "New game", Guard(gamesUi.NewGame))
     .AddItem("L", "Load a saved game", Guard(gamesUi.Continue))
     .AddItem("S", "Saved games", savedGamesMenu.Run)
     .AddItem("C", "Configurations", configMenu.Run);
