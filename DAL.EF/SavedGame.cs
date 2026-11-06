@@ -1,3 +1,5 @@
+using GameEngine;
+
 namespace DAL.EF;
 
 /// <summary>
@@ -11,6 +13,11 @@ public class SavedGame
 
     public string Name { get; set; } = "";
     public DateTime SavedAtUtc { get; set; }
+
+    /// <summary>Copies of GameState.PlayerX/PlayerO, so the list can show who plays without reading the JSON.</summary>
+    public EPlayerType PlayerX { get; set; }
+
+    public EPlayerType PlayerO { get; set; }
 
     /// <summary>Written and read by GameEngine.GameStateJson: exactly the text a .game.json file contains.</summary>
     public string StateJson { get; set; } = "";

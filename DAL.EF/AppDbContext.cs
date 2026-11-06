@@ -28,6 +28,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(g => g.Id).ValueGeneratedNever(); // the engine creates the Guid
             entity.Property(g => g.Name).HasMaxLength(GameState.MaxNameLength);
 
+            // "RandomAi" instead of 1, like the JSON: reordering the enum can't change what a row means
+            entity.Property(g => g.PlayerX).HasConversion<string>();
+            entity.Property(g => g.PlayerO).HasConversion<string>();
+
             // SQLite stores dates as text and forgets that they are UTC; this puts the Kind back when reading
             entity.Property(g => g.SavedAtUtc)
                 .HasConversion(value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));

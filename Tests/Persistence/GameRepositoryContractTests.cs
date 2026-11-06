@@ -141,6 +141,40 @@ public class GameRepositoryContractTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Storages))]
+    public void PlayerTypes_AreSaved_AndShownInTheList(string storage)
+    {
+        var repository = Games(storage);
+        var aiVsAi = GameState.New(Presets.Pro, "AI vs AI", EPlayerType.RandomAi, EPlayerType.GreedyAi);
+        var humanVsAi = GameState.New(Presets.Small, "Human vs AI", EPlayerType.Human, EPlayerType.RandomAi);
+        repository.Save(aiVsAi);
+        repository.Save(humanVsAi);
+
+        var loaded = repository.Get(aiVsAi.Id);
+        var list = repository.List(); // newest first: humanVsAi, aiVsAi
+
+        Assert.Equal(EPlayerType.RandomAi, loaded.PlayerX);
+        Assert.Equal(EPlayerType.GreedyAi, loaded.PlayerO);
+        Assert.Equal([(EPlayerType.Human, EPlayerType.RandomAi), (EPlayerType.RandomAi, EPlayerType.GreedyAi)],
+            list.Select(g => (g.PlayerX, g.PlayerO)));
+    }
+
+    [Theory]
+    [MemberData(nameof(Storages))]
+    public void Save_ChangedPlayerTypes_AreUpdated(string storage)
+    {
+        var repository = Games(storage);
+        var state = GameState.New(Presets.Small, "Switched", EPlayerType.Human, EPlayerType.RandomAi);
+        repository.Save(state);
+
+        state.PlayerO = EPlayerType.GreedyAi;
+        repository.Save(state);
+
+        Assert.Equal(EPlayerType.GreedyAi, repository.Get(state.Id).PlayerO);
+        Assert.Equal(EPlayerType.GreedyAi, Assert.Single(repository.List()).PlayerO);
+    }
+
+    [Theory]
+    [MemberData(nameof(Storages))]
     public void Save_SameGameTwice_KeepsOneEntryWithTheLatestState(string storage)
     {
         var repository = Games(storage);

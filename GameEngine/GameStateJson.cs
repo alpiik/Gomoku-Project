@@ -10,8 +10,12 @@ namespace GameEngine;
 /// </summary>
 public static class GameStateJson
 {
-    /// <summary>Goes up when the layout changes (players arrive in A5); <see cref="FromJson"/> then upgrades older text.</summary>
-    public const int CurrentVersion = 1;
+    /// <summary>
+    /// Goes up when the layout changes; <see cref="FromJson"/> still reads the older versions.
+    /// 1 (A3, A4): no player types. 2 (A5): PlayerX and PlayerO. A version 1 text needs no conversion:
+    /// the missing players keep their default, Human, which is exactly what those games were.
+    /// </summary>
+    public const int CurrentVersion = 2;
 
     /// <summary>
     /// One shared options object for every read and write (configurations too): the same settings both ways,

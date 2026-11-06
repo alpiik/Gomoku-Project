@@ -24,7 +24,8 @@ public class GameRepositoryJson : IGameRepository
         Directory.EnumerateFiles(_folder, "*" + Suffix)
             .Select(Read)
             .OrderByDescending(state => state.SavedAtUtc)
-            .Select(state => new GameSummary(state.Id, state.Name, state.Config.Name, state.SavedAtUtc))
+            .Select(state => new GameSummary(
+                state.Id, state.Name, state.Config.Name, state.PlayerX, state.PlayerO, state.SavedAtUtc))
             .ToList();
 
     public GameState Get(Guid id)

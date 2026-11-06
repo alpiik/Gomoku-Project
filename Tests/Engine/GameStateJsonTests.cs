@@ -35,6 +35,32 @@ public class GameStateJsonTests
         Assert.Equal(state.Moves, loaded.Moves);
     }
 
+    [Fact]
+    public void PlayerTypes_AreStoredAsText_AndReadBack()
+    {
+        var state = GameState.New(Presets.Small, "Players", EPlayerType.RandomAi, EPlayerType.GreedyAi);
+
+        var json = GameStateJson.ToJson(state);
+        var loaded = GameStateJson.FromJson(json, "test");
+
+        Assert.Contains("\"PlayerX\": \"RandomAi\"", json);
+        Assert.Equal(EPlayerType.RandomAi, loaded.PlayerX);
+        Assert.Equal(EPlayerType.GreedyAi, loaded.PlayerO);
+    }
+
+    [Fact]
+    public void Version1Text_FromBeforeA5_LoadsAsHumanVsHuman()
+    {
+        var state = GameState.New(Presets.Small, "Saved by A4");
+        new GameBrain(state).MakeMove(4, 4);
+
+        var loaded = GameStateJson.FromJson(OldSaves.Version1Json(state), "old file");
+
+        Assert.Equal(EPlayerType.Human, loaded.PlayerX);
+        Assert.Equal(EPlayerType.Human, loaded.PlayerO);
+        Assert.Equal(state.Moves, loaded.Moves);
+    }
+
     [Theory]
     [InlineData("{ \"Version\": 99, \"State\": { \"Config\": " + SmallConfig + " } }")] // newer program
     [InlineData("{ \"State\": { \"Config\": " + SmallConfig + " } }")]                  // no version at all

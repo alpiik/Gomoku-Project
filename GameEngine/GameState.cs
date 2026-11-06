@@ -22,6 +22,12 @@ public class GameState
 
     public EGamePiece NextMoveBy { get; set; } = EGamePiece.X;
 
+    /// <summary>Who plays X. Saves from before A5 don't have it and load as human.</summary>
+    public EPlayerType PlayerX { get; set; } = EPlayerType.Human;
+
+    /// <summary>Who plays O. Saves from before A5 don't have it and load as human.</summary>
+    public EPlayerType PlayerO { get; set; } = EPlayerType.Human;
+
     /// <summary>Every move in order. The last one is highlighted and is where the win check starts.</summary>
     public List<Move> Moves { get; set; } = [];
 
@@ -31,12 +37,17 @@ public class GameState
     public DateTime SavedAtUtc { get; set; }
 
     /// <summary>A new, empty game. Without a name the game is named after its configuration.</summary>
-    public static GameState New(GameConfiguration config, string? name = null) => new()
+    public static GameState New(GameConfiguration config, string? name = null,
+        EPlayerType playerX = EPlayerType.Human, EPlayerType playerO = EPlayerType.Human) => new()
     {
         Name = string.IsNullOrWhiteSpace(name) ? config.Name : name.Trim(),
         Config = config,
         Board = CreateBoard(config.BoardHeight, config.BoardWidth),
+        PlayerX = playerX,
+        PlayerO = playerO,
     };
+
+    public EPlayerType PlayerOf(EGamePiece piece) => piece == EGamePiece.X ? PlayerX : PlayerO;
 
     /// <summary>
     /// Problems that would stop the rules from working, e.g. in a hand-edited or damaged save file.

@@ -20,4 +20,5 @@ public interface IGameRepository
 }
 
 /// <summary>What the saved games list shows, without loading every full game.</summary>
-public record GameSummary(Guid Id, string Name, string ConfigName, DateTime SavedAtUtc);
+public record GameSummary(
+    Guid Id, string Name, string ConfigName, EPlayerType PlayerX, EPlayerType PlayerO, DateTime SavedAtUtc);

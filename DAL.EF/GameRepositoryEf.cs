@@ -13,7 +13,7 @@ public class GameRepositoryEf(AppDbContext db) : IGameRepository
         db.SavedGames
             .AsNoTracking()
             .OrderByDescending(g => g.SavedAtUtc)
-            .Select(g => new GameSummary(g.Id, g.Name, g.Configuration!.Name, g.SavedAtUtc))
+            .Select(g => new GameSummary(g.Id, g.Name, g.Configuration!.Name, g.PlayerX, g.PlayerO, g.SavedAtUtc))
             .ToList();
 
     public GameState Get(Guid id)
@@ -52,6 +52,8 @@ public class GameRepositoryEf(AppDbContext db) : IGameRepository
         row.Name = state.Name;
         row.ConfigurationId = configId;
         row.SavedAtUtc = state.SavedAtUtc;
+        row.PlayerX = state.PlayerX;
+        row.PlayerO = state.PlayerO;
         row.StateJson = GameStateJson.ToJson(state);
         db.SaveChangesAndForget();
     }

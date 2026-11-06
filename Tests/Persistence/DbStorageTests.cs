@@ -1,9 +1,13 @@
+using DAL.EF;
 using GameEngine;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Tests.Persistence;
 
-/// <summary>What only the database has: the foreign key between saved games and configurations.</summary>
+/// <summary>What only the database has: the foreign key between saved games and configurations, and migrations.</summary>
 public class DbStorageTests : IDisposable
 {
     private readonly TestStorage _storage = new();
@@ -46,6 +50,40 @@ public class DbStorageTests : IDisposable
 
         var row = _storage.Database().SavedGames.AsNoTracking().Single();
         Assert.Equal(GameStateJson.ToJson(state), row.StateJson);
+    }
+
+    [Fact]
+    public void UpgradingAnA4Database_GivesItsGamesHumanPlayers()
+    {
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
+        var migrator = db.GetService<IMigrator>();
+
+        // the database as A4 left it: only the first migration, a game row without player columns
+        migrator.Migrate("InitialCreate");
+        var state = GameState.New(Presets.Small, "Saved by A4");
+        var id = state.Id.ToString().ToUpperInvariant(); // the way EF writes a Guid into a TEXT column
+        var json = OldSaves.Version1Json(state);
+        db.Database.ExecuteSql(
+            $"INSERT INTO Configurations (Name, BoardWidth, BoardHeight, WinLength, ExactWinLength, ProOpening) VALUES ('Small', 9, 9, 4, 0, 0)");
+        db.Database.ExecuteSql(
+            $"INSERT INTO SavedGames (Id, Name, SavedAtUtc, StateJson, ConfigurationId) VALUES ({id}, 'Saved by A4', '2026-11-01 12:00:00', {json}, 1)");
+
+        // what Program.cs does at startup
+        migrator.Migrate();
+
+        // the column itself, because EF reads text it can't parse (e.g. "") as the enum's default, Human,
+        // so the repository alone would hide a wrong default value in the migration
+        var columns = db.Database
+            .SqlQuery<string>($"SELECT PlayerX || ',' || PlayerO AS Value FROM SavedGames")
+            .ToList();
+        Assert.Equal(["Human,Human"], columns);
+
+        var games = new GameRepositoryEf(db);
+        var summary = Assert.Single(games.List());
+        Assert.Equal((EPlayerType.Human, EPlayerType.Human), (summary.PlayerX, summary.PlayerO));
+        Assert.Equal(EPlayerType.Human, games.Get(state.Id).PlayerX);
     }
 
     [Fact]
