@@ -6,9 +6,11 @@ namespace ConsoleUI;
 /// <summary>
 /// Screens for listing, creating, editing and deleting configurations. The public methods return a
 /// menu result, so they can be used directly as menu item actions.
-/// Presets can be played but not edited or deleted.
+/// Presets can be played but not edited or deleted. A configuration that saved games use can't be deleted or
+/// renamed: the database forbids it (Restrict foreign key), and this screen checks first so that both
+/// storages behave the same and the user gets a clear message.
 /// </summary>
-public class ConfigurationUi(IConfigRepository repository)
+public class ConfigurationUi(IConfigRepository repository, IGameRepository games)
 {
     public string ListAll()
     {
@@ -53,9 +55,14 @@ public class ConfigurationUi(IConfigRepository repository)
             return MenuResult.None;
         }
 
-        // renamed: remove the old one first, otherwise there would be two copies
-        if (!updated.Name.Equals(old.Name, StringComparison.Ordinal))
+        // renamed (more than upper/lower case): remove the old one, otherwise there would be two copies
+        if (!updated.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase))
         {
+            if (RefuseIfUsed(old.Name, "renamed"))
+            {
+                return MenuResult.None;
+            }
+
             repository.Delete(old.Name);
         }
 
@@ -69,7 +76,7 @@ public class ConfigurationUi(IConfigRepository repository)
     {
         ConsoleInput.StartScreen("Delete a configuration");
         var name = ChooseCustom();
-        if (name is not null && ConsoleInput.AskYesNo($"Delete '{name}'?"))
+        if (name is not null && !RefuseIfUsed(name, "deleted") && ConsoleInput.AskYesNo($"Delete '{name}'?"))
         {
             repository.Delete(name);
             Console.WriteLine($"Deleted '{name}'.");
@@ -77,6 +84,20 @@ public class ConfigurationUi(IConfigRepository repository)
         }
 
         return MenuResult.None;
+    }
+
+    // true (and a message) when saved games use the configuration
+    private bool RefuseIfUsed(string name, string action)
+    {
+        var count = games.List().Count(g => g.ConfigName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (count == 0)
+        {
+            return false;
+        }
+
+        Console.WriteLine($"'{name}' can't be {action}: {count} saved game(s) use it. Delete those games first.");
+        ConsoleInput.Pause();
+        return true;
     }
 
     /// <summary>Lets the player pick any configuration, presets included. Null = cancelled.</summary>
