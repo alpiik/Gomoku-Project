@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MenuSystem\MenuSystem.csproj" />
+    <ProjectReference Include="..\GameEngine\GameEngine.csproj" />
   </ItemGroup>
 
 </Project>
