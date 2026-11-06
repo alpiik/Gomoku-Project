@@ -20,7 +20,7 @@ public class GameBrain
     public GameBrain(GameState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        var errors = state.Config.Validate();
+        var errors = state.Validate();
         if (errors.Count > 0)
         {
             throw new ArgumentException(string.Join(" ", errors), nameof(state));

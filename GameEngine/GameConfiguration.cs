@@ -37,6 +37,10 @@ public record GameConfiguration(string Name, int BoardWidth, int BoardHeight, in
         {
             errors.Add($"Name can be at most {MaxNameLength} characters.");
         }
+        else if (!IsValidName(Name))
+        {
+            errors.Add("Name can only contain letters, digits, spaces, '-' and '_', and cannot start or end with a space.");
+        }
 
         if (BoardWidth is < MinBoardSize or > MaxBoardSize)
         {
@@ -55,4 +59,13 @@ public record GameConfiguration(string Name, int BoardWidth, int BoardHeight, in
 
         return errors;
     }
+
+    /// <summary>
+    /// Letters, digits, spaces, '-' and '_', no space at either end. Such a name is also a valid
+    /// file name on Windows, macOS and Linux, so the JSON storage can use it as the file name.
+    /// </summary>
+    public static bool IsValidName(string name) =>
+        name.Length is > 0 and <= MaxNameLength
+        && name.Trim() == name
+        && name.All(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_');
 }

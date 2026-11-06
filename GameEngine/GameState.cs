@@ -6,7 +6,13 @@ namespace GameEngine;
 /// </summary>
 public class GameState
 {
+    public const int MaxNameLength = 64;
+
+    /// <summary>The key of a saved game: the same in JSON files, the database and (later) web URLs.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>Shown in the list of saved games.</summary>
+    public string Name { get; set; } = "";
 
     /// <summary>A copy of the configuration, so a saved game still works if the configuration is edited later.</summary>
     public required GameConfiguration Config { get; init; }
@@ -21,11 +27,38 @@ public class GameState
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
-    public static GameState New(GameConfiguration config) => new()
+    /// <summary>A new, empty game. Without a name the game is named after its configuration.</summary>
+    public static GameState New(GameConfiguration config, string? name = null) => new()
     {
+        Name = string.IsNullOrWhiteSpace(name) ? config.Name : name.Trim(),
         Config = config,
         Board = CreateBoard(config.BoardHeight, config.BoardWidth),
     };
+
+    /// <summary>
+    /// Problems that would stop the rules from working, e.g. in a hand-edited or damaged save file.
+    /// Empty list = the state can be played.
+    /// </summary>
+    public List<string> Validate()
+    {
+        var errors = Config.Validate();
+        if (Board.Length != Config.BoardHeight || Board.Any(row => row is null || row.Length != Config.BoardWidth))
+        {
+            errors.Add($"The board must have {Config.BoardHeight} rows of {Config.BoardWidth} cells.");
+        }
+
+        if (NextMoveBy is not (EGamePiece.X or EGamePiece.O))
+        {
+            errors.Add("The next player must be X or O.");
+        }
+
+        if (Moves.Any(m => m.Row < 0 || m.Row >= Config.BoardHeight || m.Col < 0 || m.Col >= Config.BoardWidth))
+        {
+            errors.Add("A move in the history is outside the board.");
+        }
+
+        return errors;
+    }
 
     public static EGamePiece[][] CreateBoard(int height, int width)
     {

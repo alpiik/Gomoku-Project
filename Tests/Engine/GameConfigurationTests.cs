@@ -30,7 +30,20 @@ public class GameConfigurationTests
         new GameConfiguration("Flat", 15, 8, 5),    // height too small
         new GameConfiguration("Short", 15, 15, 3),  // win length too small
         new GameConfiguration("Long", 15, 15, 7),   // win length too big
+        new GameConfiguration(new string('a', 65), 15, 15, 5), // name too long
+        new GameConfiguration("../escape", 15, 15, 5),          // could point outside the save folder
+        new GameConfiguration("a:b", 15, 15, 5),                // not allowed in a Windows file name
+        new GameConfiguration(" padded", 15, 15, 5),            // space at the start
     };
+
+    [Theory]
+    [InlineData("Free-style")]
+    [InlineData("my board_2")]
+    [InlineData("Õun 19x19")]
+    public void IsValidName_LettersDigitsSpacesDashesUnderscores_AreAllowed(string name)
+    {
+        Assert.True(GameConfiguration.IsValidName(name));
+    }
 
     [Theory]
     [MemberData(nameof(InvalidConfigurations))]
