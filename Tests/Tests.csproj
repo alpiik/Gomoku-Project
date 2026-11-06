@@ -22,6 +22,7 @@
     <ProjectReference Include="..\MenuSystem\MenuSystem.csproj" />
     <ProjectReference Include="..\GameEngine\GameEngine.csproj" />
     <ProjectReference Include="..\DAL.Json\DAL.Json.csproj" />
+    <ProjectReference Include="..\DAL.EF\DAL.EF.csproj" />
   </ItemGroup>
 
 </Project>
