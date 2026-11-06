@@ -172,9 +172,9 @@ public class ConfigurationUi(IConfigRepository repository)
 
     private string? GetNameError(string name, string? currentName)
     {
-        if (name.Length > GameConfiguration.MaxNameLength)
+        if (!GameConfiguration.IsValidName(name))
         {
-            return $"Name can be at most {GameConfiguration.MaxNameLength} characters.";
+            return $"Use only letters, digits, spaces, '-' and '_', at most {GameConfiguration.MaxNameLength} characters.";
         }
 
         var isRenameOfItself = currentName is not null && name.Equals(currentName, StringComparison.OrdinalIgnoreCase);

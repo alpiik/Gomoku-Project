@@ -4,12 +4,13 @@ using MenuSystem;
 namespace ConsoleUI;
 
 /// <summary>
-/// The game loop: draw, ask the current player's move provider, let the brain make the move, repeat.
+/// The game loop: draw, ask the current player's move provider, let the brain make the move, save, repeat.
 /// The same loop works for any provider, so AI players (A5, A6) need no changes here.
 /// </summary>
 public static class GameRunner
 {
-    public static string Run(GameState state, IMoveProvider xPlayer, IMoveProvider oPlayer)
+    /// <summary>Plays a new or a loaded game. The game is saved after every move, so leaving never loses anything.</summary>
+    public static string Run(GameState state, IMoveProvider xPlayer, IMoveProvider oPlayer, IGameRepository games)
     {
         var brain = new GameBrain(state);
         var message = "";
@@ -25,9 +26,15 @@ public static class GameRunner
             }
 
             // an illegal move only shows a message; the same player is asked again
-            message = brain.TryMakeMove(move.Value.Row, move.Value.Col, out var error)
-                ? ""
-                : $"Illegal move: {error}";
+            if (brain.TryMakeMove(move.Value.Row, move.Value.Col, out var error))
+            {
+                games.Save(state); // autosave
+                message = "";
+            }
+            else
+            {
+                message = $"Illegal move: {error}";
+            }
         }
 
         BoardView.Draw(brain, ResultText(brain.Status));
