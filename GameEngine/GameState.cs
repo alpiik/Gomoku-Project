@@ -27,6 +27,9 @@ public class GameState
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Set by the repository every time the game is saved. The saved games list is sorted by it.</summary>
+    public DateTime SavedAtUtc { get; set; }
+
     /// <summary>A new, empty game. Without a name the game is named after its configuration.</summary>
     public static GameState New(GameConfiguration config, string? name = null) => new()
     {

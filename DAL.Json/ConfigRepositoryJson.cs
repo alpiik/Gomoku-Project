@@ -46,7 +46,7 @@ public class ConfigRepositoryJson : IConfigRepository
             throw new ArgumentException(string.Join(" ", errors), nameof(config));
         }
 
-        FileHelpers.WriteAtomic(PathFor(config.Name)!, JsonSerializer.Serialize(config, JsonDefaults.Options));
+        FileHelpers.WriteAtomic(PathFor(config.Name)!, JsonSerializer.Serialize(config, GameStateJson.Options));
     }
 
     public void Delete(string name)
@@ -70,7 +70,7 @@ public class ConfigRepositoryJson : IConfigRepository
         GameConfiguration? config;
         try
         {
-            config = JsonSerializer.Deserialize<GameConfiguration>(File.ReadAllText(path), JsonDefaults.Options);
+            config = JsonSerializer.Deserialize<GameConfiguration>(File.ReadAllText(path), GameStateJson.Options);
         }
         catch (JsonException e)
         {
