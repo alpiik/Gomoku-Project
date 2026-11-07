@@ -2,10 +2,10 @@
 
 | | |
 | --- | --- |
-| Name | TODO full name |
-| Student code | TODO |
-| School e-mail | TODO |
-| Uni-ID | TODO |
+| Name | Albert Piikov |
+| Student code | 233436IADB |
+| School e-mail | alpiik@taltech.ee |
+| Uni-ID | alpiik |
 | Assigned game | **Gomoku** (board 9–19, rectangles allowed, win length 4–6, overline rule toggle, optional pro opening) |
 
 ## Build, run, test
