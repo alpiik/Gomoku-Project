@@ -17,7 +17,7 @@ dotnet run --project MenuDemo     # A1 menu library demo
 dotnet run --project ConsoleUI    # the game (from A2)
 ```
 
-Run the console apps in a real terminal (or enable *Emulate terminal in output console* in Rider) — the menu clears the screen between redraws, and the key that stops an AI vs AI game (A5) can only be detected on a real keyboard. With redirected input (Rider's plain output console, piped input) a key press is never seen.
+Run the console apps in a real terminal such as Windows Terminal. The menu and the board clear the screen before every redraw, and Rider's Run window can draw that wrongly: the new text lands on top of the old menu. The key that stops an AI vs AI game (A5) is read straight from the keyboard, so it never fires when the input is piped in (`dotnet run --project ConsoleUI < moves.txt`). To debug, start the app in the terminal and attach Rider to it (*Run → Attach to Process*).
 
 ## Solution structure
 
